@@ -1,7 +1,21 @@
 import argparse
 import asyncio
+import os
 
 from . import server
+
+
+def validate_args(args):
+    if len(args.allow) != len(set(args.allow)):
+        raise ValueError("Duplicate paths found in --allow")
+    if len(args.deny) != len(set(args.deny)):
+        raise ValueError("Duplicate paths found in --deny")
+
+    for path in args.allow + args.deny:
+        if not os.path.exists(path):
+            raise ValueError(f"Path does not exist: {path}")
+        if not os.path.isdir(path):
+            raise ValueError(f"Path is not a directory: {path}")
 
 
 def main():
@@ -12,6 +26,7 @@ def main():
     parser.add_argument(
         '--allow',
         action='append',
+        required=True,
         default=[],
         help='Allowed paths (can specify multiple by repeating flag)')
     parser.add_argument(
@@ -21,6 +36,7 @@ def main():
         help='Denied paths (can specify multiple by repeating flag)')
     args = parser.parse_args()
 
+    validate_args(args)
     config = Config()
     config.allow = args.allow
     config.deny = args.deny
