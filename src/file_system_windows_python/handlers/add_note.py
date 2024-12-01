@@ -1,11 +1,19 @@
+import logging
+
 from mcp.types import TextContent
 
-from file_system_windows_python.util.config import Config
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.util.path_validator import PathValidator
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class AddNoteHandler(Handler):
     async def execute(self, arguments: dict) -> list[TextContent]:
+
+        logger.debug("Starting add note handler")
+
         note_name = arguments.get("name")
         if not note_name:
             raise ValueError("Missing tool name")
@@ -13,9 +21,20 @@ class AddNoteHandler(Handler):
         if not content:
             raise ValueError("Missing tool content")
 
+        try:
+            await PathValidator.validate_path(note_name)
+            logger.debug("Path validation passed")
+        except Exception as e:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Failed to add note: {str(e)}",
+                )
+            ]
+
         return [
             TextContent(
                 type="text",
-                text=f"Added note '{note_name}' with content: {Config().allow}, {Config().deny}",
+                text=f"Added the note {note_name} with content: {content}",
             )
         ]

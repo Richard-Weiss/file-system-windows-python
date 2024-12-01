@@ -41,7 +41,7 @@ def main():
     config.allow = args.allow
     config.deny = args.deny
 
-    asyncio.run(server.main(args))
+    asyncio.run(server.main())
 
 
 __all__ = ['main', 'server']

@@ -1,4 +1,7 @@
+import logging
+
 import mcp.server.stdio
+from mcp import types
 from mcp.server import Server
 from mcp.types import *
 from pydantic import AnyUrl
@@ -8,6 +11,9 @@ from file_system_windows_python.tools.util.tool_factory import ToolFactory
 from file_system_windows_python.tools.util.tool_registry import ToolRegistry
 
 server = Server("file-system-windows-python")
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 @server.list_resources()
@@ -62,17 +68,23 @@ async def handle_call_tool(
     Handle tool execution requests.
     Tools can modify server state and notify clients of changes.
     """
+    logger.debug(f"Calling tool: {name}")
     handler = ToolRegistry().get_handler(name)
     if not handler:
         raise ValueError(f"Unknown tool: {name}")
 
     if not arguments:
         raise ValueError("Missing arguments")
+    result = await handler.execute(arguments)
 
-    return await handler.execute(arguments)
+    if isinstance(result[0], types.TextContent):
+        logger.debug(f"Result for tool {name} with arguments {arguments}: '{result[0].text}'")
+
+    return result
 
 
-async def main(args) -> None:
+async def main() -> None:
+    logger.debug("Registering tools")
     tool_registry = ToolRegistry()
     tool_registry.register_tool("add-note", ToolFactory.create_add_note_tool(), AddNoteHandler())
 
