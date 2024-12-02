@@ -1,12 +1,12 @@
 import logging
+from typing import Any
 
 import mcp.server.stdio
 from mcp import types
 from mcp.server import Server
-from mcp.types import *
+from mcp.types import Resource, Prompt, GetPromptResult, Tool, TextContent, ImageContent, EmbeddedResource
 from pydantic import AnyUrl
 
-from file_system_windows_python.handlers.add_note import AddNoteHandler
 from file_system_windows_python.tools.util.tool_factory import ToolFactory
 from file_system_windows_python.tools.util.tool_registry import ToolRegistry
 
@@ -14,6 +14,11 @@ server = Server("file-system-windows-python")
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+
+async def initialize_singletons():
+    """Initialize core application components"""
+    ToolRegistry()
 
 
 @server.list_resources()
@@ -57,12 +62,14 @@ async def handle_list_tools() -> list[Tool]:
     List available tools.
     Each tool specifies its arguments using JSON Schema validation.
     """
-    return [ToolFactory.create_add_note_tool()]
+    return [ToolFactory.create_add_note_tool(),
+            ToolFactory.create_list_allowed_directories_tool(),
+            ToolFactory.create_list_denied_directories_tool()]
 
 
 @server.call_tool()
 async def handle_call_tool(
-        name: str, arguments: dict | None
+        name: str, arguments: dict[str, Any] | None
 ) -> list[TextContent | ImageContent | EmbeddedResource]:
     """
     Handle tool execution requests.
@@ -73,8 +80,6 @@ async def handle_call_tool(
     if not handler:
         raise ValueError(f"Unknown tool: {name}")
 
-    if not arguments:
-        raise ValueError("Missing arguments")
     result = await handler.execute(arguments)
 
     if isinstance(result[0], types.TextContent):
@@ -84,10 +89,7 @@ async def handle_call_tool(
 
 
 async def main() -> None:
-    logger.debug("Registering tools")
-    tool_registry = ToolRegistry()
-    tool_registry.register_tool("add-note", ToolFactory.create_add_note_tool(), AddNoteHandler())
-
+    await initialize_singletons()
     options = server.create_initialization_options()
     async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
         await server.run(

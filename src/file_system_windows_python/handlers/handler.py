@@ -4,6 +4,6 @@ from mcp.types import *
 
 class Handler(ABC):
     @abstractmethod
-    async def execute(self, arguments: dict) \
+    async def execute(self, arguments: dict | None) \
             -> list[TextContent | ImageContent | EmbeddedResource]:
         raise NotImplementedError()

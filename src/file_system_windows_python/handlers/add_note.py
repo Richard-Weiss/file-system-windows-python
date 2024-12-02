@@ -11,9 +11,10 @@ logger = logging.getLogger(__name__)
 
 class AddNoteHandler(Handler):
     async def execute(self, arguments: dict) -> list[TextContent]:
-
         logger.debug("Starting add note handler")
 
+        if not arguments:
+            raise ValueError("Missing arguments")
         note_name = arguments.get("name")
         if not note_name:
             raise ValueError("Missing tool name")
@@ -21,16 +22,8 @@ class AddNoteHandler(Handler):
         if not content:
             raise ValueError("Missing tool content")
 
-        try:
-            await PathValidator.validate_path(note_name)
-            logger.debug("Path validation passed")
-        except Exception as e:
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Failed to add note: {str(e)}",
-                )
-            ]
+        await PathValidator.validate_path(note_name)
+        logger.debug("Path validation passed")
 
         return [
             TextContent(
