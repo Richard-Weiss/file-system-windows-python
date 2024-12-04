@@ -22,7 +22,7 @@ class AddNoteHandler(Handler):
         if not content:
             raise ValueError("Missing tool content")
 
-        await PathValidator.validate_path(note_name)
+        await PathValidator.validate_file_path(note_name)
         logger.debug("Path validation passed")
 
         return [

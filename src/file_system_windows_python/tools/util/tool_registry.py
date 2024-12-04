@@ -4,6 +4,7 @@ from file_system_windows_python.handlers.add_note import AddNoteHandler
 from file_system_windows_python.handlers.handler import Handler
 from file_system_windows_python.handlers.list_allowed_directories import ListAllowedDirectoriesHandler
 from file_system_windows_python.handlers.list_denied_directories import ListDeniedDirectoriesHandler
+from file_system_windows_python.handlers.ls import LsHandler
 from file_system_windows_python.tools.util.tool_factory import ToolFactory
 
 
@@ -46,3 +47,8 @@ class ToolRegistry:
             "list-denied-directories",
             ToolFactory.create_list_denied_directories_tool(),
             ListDeniedDirectoriesHandler())
+        self.register_tool(
+            'ls',
+            ToolFactory.create_ls_tool(),
+            LsHandler()
+        )

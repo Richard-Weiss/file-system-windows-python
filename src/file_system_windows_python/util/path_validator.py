@@ -31,7 +31,15 @@ class PathValidator:
     """
 
     @staticmethod
-    async def validate_path(path_str: str):
+    async def validate_file_path(path_str: str):
+        await PathValidator._validate_path(path_str, is_file=True)
+
+    @staticmethod
+    async def validate_directory_path(path_str: str):
+        await PathValidator._validate_path(path_str, is_file=False)
+
+    @staticmethod
+    async def _validate_path(path_str: str, is_file: bool):
         try:
             logger.debug("Starting path validation")
             logger.debug("Resolving allowed paths")
@@ -49,8 +57,10 @@ class PathValidator:
             if not abs_path.exists():
                 raise PathValidationError(f"Path {abs_path} does not exist!")
 
-            if not abs_path.is_file():
+            if is_file and not abs_path.is_file():
                 raise PathValidationError(f"Path {abs_path} is not a file!")
+            elif not is_file and not abs_path.is_dir():
+                raise PathValidationError(f"Path {abs_path} is not a directory!")
 
             if not any(PathValidator._is_subpath(abs_path, allowed) for allowed in allowed_paths):
                 raise PathValidationError(f"Path {abs_path} is not within allowed paths!")
@@ -60,13 +70,14 @@ class PathValidator:
                     if PathValidator._is_subpath(abs_path, denied):
                         raise PathValidationError(f"Path {abs_path} is within denied path {denied}!")
 
-            logger.debug("Checking file type")
-            magika = Magika()
-            async with aiofiles.open(str(abs_path), 'rb') as f:
-                content = await f.read()
-                result = magika.identify_bytes(content)
-                if result.output.mime_type != 'text/plain':
-                    raise PathValidationError(f"File type {result.output.mime_type} is not allowed!")
+            if is_file:
+                logger.debug("Checking file type")
+                magika = Magika()
+                async with aiofiles.open(str(abs_path), 'rb') as f:
+                    content = await f.read()
+                    result = magika.identify_bytes(content)
+                    if result.output.mime_type not in ['text/plain', 'image/*']:
+                        raise PathValidationError(f"File type {result.output.mime_type} is not allowed!")
 
             logger.debug("Path validation successful!")
         except Exception as e:

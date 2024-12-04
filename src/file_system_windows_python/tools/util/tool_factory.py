@@ -38,3 +38,18 @@ class ToolFactory:
                 "properties": {},
             },
         )
+
+    @staticmethod
+    def create_ls_tool() -> types.Tool:
+        return types.Tool(
+            name="ls",
+            description="List directories using an absolute path. Optionally specify a page number.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "page": {"type": "integer"},
+                },
+                "required": ["path"],
+            },
+        )
