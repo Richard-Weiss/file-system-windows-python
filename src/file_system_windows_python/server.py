@@ -65,7 +65,8 @@ async def handle_list_tools() -> list[Tool]:
     return [ToolFactory.create_add_note_tool(),
             ToolFactory.create_list_allowed_directories_tool(),
             ToolFactory.create_list_denied_directories_tool(),
-            ToolFactory.create_ls_tool()]
+            ToolFactory.create_ls_tool(),
+            ToolFactory.create_read_file_tool()]
 
 
 @server.call_tool()

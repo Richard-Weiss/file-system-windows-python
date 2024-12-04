@@ -71,13 +71,9 @@ class PathValidator:
                         raise PathValidationError(f"Path {abs_path} is within denied path {denied}!")
 
             if is_file:
-                logger.debug("Checking file type")
-                magika = Magika()
-                async with aiofiles.open(str(abs_path), 'rb') as f:
-                    content = await f.read()
-                    result = magika.identify_bytes(content)
-                    if result.output.mime_type not in ['text/plain', 'image/*']:
-                        raise PathValidationError(f"File type {result.output.mime_type} is not allowed!")
+                file_type = await PathValidator.get_file_type(abs_path)
+                if not file_type.startswith('text/') and not file_type.startswith('image/'):
+                    raise PathValidationError(f"File type {file_type} is not allowed!")
 
             logger.debug("Path validation successful!")
         except Exception as e:
@@ -104,3 +100,12 @@ class PathValidator:
             return str(path).startswith(str(parent))
         except (ValueError, RuntimeError) as e:
             raise PathValidationError(f"Failed to resolve path during comparison: {str(e)}")
+
+    @staticmethod
+    async def get_file_type(path: Path) -> str:
+        logger.debug("Checking file type")
+        magika = Magika()
+        async with aiofiles.open(str(path), 'rb') as f:
+            content = await f.read()
+            result = magika.identify_bytes(content)
+        return result.output.mime_type

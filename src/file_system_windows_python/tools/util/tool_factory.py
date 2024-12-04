@@ -53,3 +53,17 @@ class ToolFactory:
                 "required": ["path"],
             },
         )
+
+    @staticmethod
+    def create_read_file_tool() -> types.Tool:
+        return types.Tool(
+            name="read-file",
+            description="Reads the contents of a file. Allowed types are text/plain and images.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                },
+                "required": ["path"],
+            },
+        )
