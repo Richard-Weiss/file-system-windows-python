@@ -1,6 +1,5 @@
 from mcp.types import Tool
 
-from file_system_windows_python.handlers.add_note import AddNoteHandler
 from file_system_windows_python.handlers.handler import Handler
 from file_system_windows_python.handlers.list_allowed_directories import ListAllowedDirectoriesHandler
 from file_system_windows_python.handlers.list_denied_directories import ListDeniedDirectoriesHandler
@@ -36,10 +35,6 @@ class ToolRegistry:
 
     def _register_default_tools(self):
         """Register all default tools and their handlers."""
-        self.register_tool(
-            "add-note",
-            ToolFactory.create_add_note_tool(),
-            AddNoteHandler())
         self.register_tool(
             "list-allowed-directories",
             ToolFactory.create_list_allowed_directories_tool(),
