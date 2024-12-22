@@ -103,9 +103,13 @@ class PathValidator:
 
     @staticmethod
     async def get_file_type(path: Path) -> str:
-        logger.debug("Checking file type")
-        magika = Magika()
-        async with aiofiles.open(str(path), 'rb') as f:
-            content = await f.read()
-            result = magika.identify_bytes(content)
-        return result.output.mime_type
+        try:
+            async with aiofiles.open(str(path), 'r', encoding='utf-8') as f:
+                await f.read(1024)
+                return 'text/plain'
+        except UnicodeDecodeError:
+            magika = Magika()
+            async with aiofiles.open(str(path), 'rb') as f:
+                content = await f.read()
+                result = magika.identify_bytes(content)
+            return result.output.mime_type

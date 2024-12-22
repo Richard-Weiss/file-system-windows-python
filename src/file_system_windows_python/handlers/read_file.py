@@ -38,7 +38,7 @@ class ReadFileHandler(Handler):
 
     @staticmethod
     async def create_output_text(file_path: Path) -> list[TextContent]:
-        async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
+        async with aiofiles.open(file_path, 'r') as f:
             content = await f.read()
         return [
             TextContent(

@@ -4,10 +4,8 @@ from typing import Any
 import mcp.server.stdio
 from mcp import types
 from mcp.server import Server
-from mcp.types import Resource, Prompt, GetPromptResult, Tool, TextContent, ImageContent, EmbeddedResource
-from pydantic import AnyUrl
+from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
 
-from file_system_windows_python.tools.util.tool_factory import ToolFactory
 from file_system_windows_python.tools.util.tool_registry import ToolRegistry
 
 server = Server("file-system-windows-python")
@@ -21,51 +19,13 @@ async def initialize_singletons():
     ToolRegistry()
 
 
-@server.list_resources()
-async def handle_list_resources() -> list[Resource]:
-    """
-    List available resources.
-    """
-    raise NotImplementedError()
-
-
-@server.read_resource()
-async def handle_read_resource(uri: AnyUrl) -> str:
-    """
-    Read a specific resource by its uri.
-    """
-    raise NotImplementedError()
-
-
-@server.list_prompts()
-async def handle_list_prompts() -> list[Prompt]:
-    """
-    List available prompts.
-    Each prompt can have optional arguments to customize its behavior.
-    """
-    raise NotImplementedError()
-
-
-@server.get_prompt()
-async def handle_get_prompt(
-        name: str, arguments: dict[str, str] | None
-) -> GetPromptResult:
-    """
-    Generate a prompt by combining arguments with server state.
-    """
-    raise NotImplementedError()
-
-
 @server.list_tools()
 async def handle_list_tools() -> list[Tool]:
     """
     List available tools.
     Each tool specifies its arguments using JSON Schema validation.
     """
-    return [ToolFactory.create_list_allowed_directories_tool(),
-            ToolFactory.create_list_denied_directories_tool(),
-            ToolFactory.create_ls_tool(),
-            ToolFactory.create_read_file_tool()]
+    return ToolRegistry().list_tools()
 
 
 @server.call_tool()
