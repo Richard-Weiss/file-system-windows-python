@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pathlib import Path
 
@@ -71,8 +72,12 @@ class PathValidator:
                         raise PathValidationError(f"Path {abs_path} is within denied path {denied}!")
 
             if is_file:
+                logger.debug("Checking file type")
                 file_type = await PathValidator.get_file_type(abs_path)
-                if not file_type.startswith('text/') and not file_type.startswith('image/'):
+                logger.debug(f"Pure file type: {file_type}")
+                allowed_file_types = (file_type.startswith(('text/', 'image/'))
+                                      or file_type == 'application/pdf')
+                if not allowed_file_types:
                     raise PathValidationError(f"File type {file_type} is not allowed!")
 
             logger.debug("Path validation successful!")
@@ -94,8 +99,13 @@ class PathValidator:
             bool: True if path is a subpath of parent
         """
         try:
-            path = Path(str(path)).resolve()
-            parent = Path(str(parent)).resolve()
+            if path.is_symlink():
+                path = path.readlink()
+            if parent.is_symlink():
+                parent = parent.readlink()
+
+            path = Path(str(path)).resolve(strict=True)
+            parent = Path(str(parent)).resolve(strict=True)
 
             return str(path).startswith(str(parent))
         except (ValueError, RuntimeError) as e:
@@ -103,13 +113,22 @@ class PathValidator:
 
     @staticmethod
     async def get_file_type(path: Path) -> str:
-        try:
-            async with aiofiles.open(str(path), 'r', encoding='utf-8') as f:
-                await f.read(1024)
-                return 'text/plain'
-        except UnicodeDecodeError:
-            magika = Magika()
+        magika = Magika()
+        async with asyncio.timeout(10):
             async with aiofiles.open(str(path), 'rb') as f:
                 content = await f.read()
                 result = magika.identify_bytes(content)
-            return result.output.mime_type
+                mime_type = result.output.mime_type
+
+        if mime_type != 'application/pdf' and not mime_type.startswith('image/'):
+            try:
+                async with asyncio.timeout(10):
+                    async with aiofiles.open(str(path), 'r', encoding='utf-8') as f:
+                        content = await f.read()
+                        if '\x00' in content:
+                            raise PathValidationError("File contains null bytes! Null bytes aren't currently supported.")
+                        return 'text/plain'
+            except UnicodeDecodeError:
+                pass
+
+        return mime_type
