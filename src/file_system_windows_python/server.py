@@ -1,4 +1,5 @@
 import logging
+from sys import stdout
 from typing import Any
 
 import mcp.server.stdio
@@ -8,10 +9,11 @@ from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
 
 from file_system_windows_python.tools.util.tool_registry import ToolRegistry
 
-server = Server("file-system-windows-python")
-
+stdout.reconfigure(encoding='utf-8')
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+server = Server("file-system-windows-python")
 
 
 async def initialize_singletons():

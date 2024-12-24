@@ -107,7 +107,7 @@ class ToolRegistry:
         self.register_tool(
             ToolDefinition(
                 name=Tools.WRITE_FILE,
-                description="Writes content to a file at the specified absolute path. Since the content is replaced, make sure to call read-file first and include everything without placeholders. Do not end the content with an emoji.",
+                description="Writes content to a file at the specified absolute path. Since the content is replaced, make sure to call read-file first and include everything without placeholders.",
                 inputSchema={
                     "type": "object",
                     "properties": {
