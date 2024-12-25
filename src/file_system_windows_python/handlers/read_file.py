@@ -29,121 +29,108 @@ class ReadFileHandler(Handler):
         file_path = Path(path).resolve()
 
         try:
-            async with asyncio.timeout(10):
-                try:
-                    return await self.create_output_text(file_path)
-                except UnicodeDecodeError:
-                    file_type = await PathValidator.get_file_type(file_path)
-                    if file_type.startswith('image/'):
-                        return await self.create_output_image(file_path, file_type)
-                    elif file_type == 'application/pdf':
-                        return await self.create_output_pdf_as_images(file_path)
-                    else:
-                        return [TextContent(
-                            type="text",
-                            text=f"File type {file_type} is not allowed!"
-                        )]
-
-        except asyncio.TimeoutError:
-            return [TextContent(
-                type="text",
-                text="File read operation timed out"
-            )]
+            try:
+                return await self.create_output_text(file_path)
+            except UnicodeDecodeError:
+                file_type = await PathValidator.get_file_type(file_path)
+                if file_type.startswith('image/'):
+                    return await self.create_output_image(file_path, file_type)
+                elif file_type == 'application/pdf':
+                    return await self.create_output_pdf_as_images(file_path)
+                else:
+                    return [TextContent(type="text", text=f"File type {file_type} is not allowed!")]
         except Exception as e:
             logger.error(f"Error reading file: {str(e)}")
-            return [TextContent(
-                type="text",
-                text=f"Error reading file: {str(e)}"
-            )]
+            return [TextContent(type="text", text=f"Error reading file: {str(e)}")]
 
     @staticmethod
     async def create_output_text(file_path: Path) -> list[TextContent]:
         async with aiofiles.open(file_path, 'r') as f:
             content = await f.read()
-        return [
-            TextContent(
-                type="text",
-                text=content
-            )
-        ]
+        return [TextContent(type="text", text=content)]
 
     @staticmethod
     async def create_output_image(file_path: Path, file_type: str) -> List[ImageContent]:
         async with aiofiles.open(file_path, 'rb') as f:
             content = await f.read()
-        return [
-            ImageContent(
-                type="image",
-                data=base64.b64encode(content).decode('utf-8'),
-                mimeType=file_type
-            )
-        ]
-
-    @staticmethod
-    async def create_output_default() -> list[TextContent]:
-        return [
-            TextContent(
-                type="text",
-                text="Unsupported file type"
-            )
-        ]
+        return [ImageContent(
+            type="image",
+            data=base64.b64encode(content).decode('utf-8'),
+            mimeType=file_type
+        )]
 
     @staticmethod
     async def create_output_pdf_as_images(file_path: Path) -> List[Union[ImageContent, TextContent]]:
         results = []
         text_only = False
+
         with fitz.open(str(file_path)) as pdf:
-            if len(pdf) > 100:
+            page_count = len(pdf)
+
+            if page_count > 100:
                 text_only = True
                 results.append(TextContent(
                     type="text",
-                    text="PDF contains more than 100 pages, only text is returned.")
-                )
+                    text="PDF contains more than 100 pages, only text is returned."
+                ))
 
             extracted_texts = []
-            for page_num in range(len(pdf)):
+            tasks = []
+            for page_num in range(page_count):
                 page = pdf[page_num]
-                text = ReadFileHandler._extract_page_text(page, page_num)
+                tasks.append(
+                    ReadFileHandler.process_page(
+                        page,
+                        text_only,
+                        extracted_texts,
+                        results
+                    )
+                )
 
-                if text_only:
-                    extracted_texts.append(text)
-                else:
-                    optimal_zoom = ReadFileHandler.calculate_zoom(page)
-                    pix = page.get_pixmap(matrix=fitz.Matrix(optimal_zoom, optimal_zoom))
-                    img_bytes = pix.tobytes("png")
-                    buffer = io.BytesIO(img_bytes)
-                    img = Image.open(buffer)
-                    webp_buffer = io.BytesIO()
-                    img.save(webp_buffer, format="WEBP", quality=80, method=6)
-                    webp_bytes = webp_buffer.getvalue()
-                    results.append(ImageContent(
-                        type="image",
-                        data=base64.b64encode(webp_bytes).decode('utf-8'),
-                        mimeType="image/webp"
-                    ))
-                    results.append(TextContent(
-                        type="text",
-                        text=f"<extractedText>{text}</extractedText>"
-                    ))
+            await asyncio.gather(*tasks)
 
             if text_only:
                 results.append(TextContent(
                     type="text",
                     text=f"<extractedText>{''.join(extracted_texts)}</extractedText>"
                 ))
-        logger.debug("Done processing PDF")
-        logger.debug(f"Results length: {len(results)}")
+
         return results
 
     @staticmethod
-    def _extract_page_text(page, page_num):
-        logger.debug(f"Extracting text from page {page_num + 1}")
+    async def process_page(page, text_only, extracted_texts, results):
         text = page.get_text()
-        logger.debug(f"Extracted text from page {page_num + 1}: {text}")
-        return text
+
+        if text_only:
+            extracted_texts.append(text)
+        else:
+            optimal_zoom = await ReadFileHandler._calculate_zoom(page)
+            webp_bytes = await ReadFileHandler._convert_page_to_webp(page, optimal_zoom)
+
+            results.append(ImageContent(
+                type="image",
+                data=base64.b64encode(webp_bytes).decode('utf-8'),
+                mimeType="image/webp"
+            ))
+            results.append(TextContent(
+                type="text",
+                text=f"<extractedText>{text}</extractedText>"
+            ))
 
     @staticmethod
-    def calculate_zoom(page):
+    async def _convert_page_to_webp(page, optimal_zoom):
+        def _convert():
+            pix = page.get_pixmap(matrix=fitz.Matrix(optimal_zoom, optimal_zoom))
+            mode = "RGBA" if pix.alpha else "RGB"
+            img = Image.frombytes(mode, (pix.width, pix.height), pix.samples)
+            output_buffer = io.BytesIO()
+            img.save(output_buffer, format="WEBP", quality=80, method=6)
+            return output_buffer.getvalue()
+
+        return await asyncio.to_thread(_convert)
+
+    @staticmethod
+    async def _calculate_zoom(page):
         rect = page.rect
         orig_width = rect.width
         orig_height = rect.height

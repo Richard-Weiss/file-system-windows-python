@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from sys import stdout
 from typing import Any
@@ -8,10 +9,12 @@ from mcp.server import Server
 from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
 
 from file_system_windows_python.tools.util.tool_registry import ToolRegistry
+from file_system_windows_python.util.result_guard import ResultGuard
 
 stdout.reconfigure(encoding='utf-8')
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+logging.getLogger('PIL').setLevel(logging.INFO)
 
 server = Server("file-system-windows-python")
 
@@ -43,7 +46,13 @@ async def handle_call_tool(
     if not handler:
         raise ValueError(f"Unknown tool: {name}")
 
-    result = await handler.execute(arguments)
+    try:
+        async with asyncio.timeout(5):
+            result = await handler.execute(arguments)
+    except asyncio.TimeoutError:
+        result = [TextContent(type="text", text=f"Handler for tool {name} timed out")]
+
+    result = ResultGuard().validate_result(result, name, arguments)
 
     if isinstance(result[0], types.TextContent):
         logger.debug(f"Result for tool {name} with arguments {arguments}: '{result[0].text}'")
