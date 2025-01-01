@@ -4,6 +4,7 @@ import aiofiles
 from mcp.types import TextContent
 
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.tools.tools import Tools
 from file_system_windows_python.util.logging import log_execution
 from file_system_windows_python.util.path_validator import PathValidator
 
@@ -18,7 +19,7 @@ class WriteFileHandler(Handler):
     This handler writes the provided content to the specified file path.
     """
 
-    @log_execution("write_file")
+    @log_execution(Tools.WRITE_FILE)
     async def execute(self, arguments: dict) -> list[TextContent]:
         """
         Execute the handler to write content to a file.

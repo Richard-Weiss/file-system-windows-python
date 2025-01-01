@@ -11,6 +11,7 @@ from PIL import Image
 from mcp.types import TextContent, ImageContent
 
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.tools.tools import Tools
 from file_system_windows_python.util.logging import log_execution
 from file_system_windows_python.util.path_validator import PathValidator
 
@@ -25,7 +26,7 @@ class ReadFileHandler(Handler):
     This handler reads the contents of a specified file and returns it as a list of TextContent or ImageContent objects.
     """
 
-    @log_execution("read_file")
+    @log_execution(Tools.READ_FILE)
     async def execute(self, arguments: dict) -> List[TextContent | ImageContent]:
         """
         Execute the handler to read a file.

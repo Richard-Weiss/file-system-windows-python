@@ -5,6 +5,7 @@ from typing import List
 from mcp.types import TextContent
 
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.tools.tools import Tools
 from file_system_windows_python.util.logging import log_execution
 from file_system_windows_python.util.path_validator import PathValidator
 
@@ -20,7 +21,7 @@ class LsHandler(Handler):
     as a list of TextContent objects, with pagination support.
     """
 
-    @log_execution("ls")
+    @log_execution(Tools.LS)
     async def execute(self, arguments: dict) -> List[TextContent]:
         """
         Execute the handler to list directory contents.

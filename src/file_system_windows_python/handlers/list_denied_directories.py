@@ -3,6 +3,7 @@ import logging
 from mcp.types import TextContent
 
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.tools.tools import Tools
 from file_system_windows_python.util.config import Config
 from file_system_windows_python.util.logging import log_execution
 
@@ -18,7 +19,7 @@ class ListDeniedDirectoriesHandler(Handler):
     and returns it as a list of TextContent objects.
     """
 
-    @log_execution("list_denied_directories")
+    @log_execution(Tools.LIST_DENIED_DIRECTORIES)
     async def execute(self, arguments: None) -> list[TextContent]:
         """
         Execute the handler to list denied directories.
