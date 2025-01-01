@@ -1,32 +1,45 @@
 # file-system-windows-python MCP server
 
-A MCP server project
+A Model Context Protocol (MCP) server that provides secure access to the Windows file system with image and PDF read support.
+
+**This MCP server is *as is* and published mainly for illustration purposes. Do not expect support.**
 
 ## Components
 
-### Resources
-
-The server implements a simple note storage system with:
-- Custom note:// URI scheme for accessing individual notes
-- Each note resource has a name, description and text/plain mimetype
-
-### Prompts
-
-The server provides a single prompt:
-- summarize-notes: Creates summaries of all stored notes
-  - Optional "style" argument to control detail level (brief/detailed)
-  - Generates prompt combining all current notes with style preference
-
 ### Tools
 
-The server implements one tool:
-- add-note: Adds a new note to the server
-  - Takes "name" and "content" as required string arguments
-  - Updates server state and notifies clients of resource changes
+The server implements the following tools:
+
+- `list-allowed-directories`: Lists directories that have been allowed for access
+- `list-denied-directories`: Lists directories that have been denied access
+- `ls`: Lists contents of a directory
+  - Takes "path" as required string argument
+  - Optional "page" argument for pagination (50 items per page)
+- `read-file`: Reads the contents of files
+  - Takes "path" as required string argument
+  - Supports text files, PDFs (converted to images with text extraction), and images
+  - Returns content wrapped in `<fileContent>` tags for text files
+- `write-file`: Writes content to a file
+  - Takes "path" and "content" as required string arguments
+  - Updates the file content and returns success message
 
 ## Configuration
 
-[TODO: Add configuration details specific to your implementation]
+The server requires configuration of allowed and denied directories for security:
+
+```bash
+file-system-windows-python --allow /path/to/allowed/dir [--deny /path/to/denied/dir]
+```
+
+Example:
+```bash
+file-system-windows-python --allow "G:/Claude" --deny "G:/Claude/not for you"
+```
+
+Multiple arguments can be chained like this:
+```bash
+file-system-windows-python --allow "G:/Claude" --allow "C:/Users/dev/Developer_Tools/PycharmProjects" --deny "G:/Claude/not for you"
+```
 
 ## Quickstart
 
@@ -37,58 +50,18 @@ The server implements one tool:
 On MacOS: `~/Library/Application\ Support/Claude/claude_desktop_config.json`
 On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 
-<details>
-  <summary>Published Servers Configuration</summary>
-  ```
-  "mcpServers": {
+Example configuration:
+  ```bash
+  "mcpServers": 
     "file-system-windows-python": {
-      "command": "uvx",
+      "command": "uv",
       "args": [
-        "file-system-windows-python"
+        "--directory",
+        "C:/Users/dev/Developer_Tools/PycharmProjects/file-system-windows-python", // replace with own path
+        "run",
+        "file-system-windows-python",
+        "--allow",
+        "G:/Claude" //replace with own path
       ]
     }
-  }
   ```
-</details>
-
-## Development
-
-### Building and Publishing
-
-To prepare the package for distribution:
-
-1. Sync dependencies and update lockfile:
-```bash
-uv sync
-```
-
-2. Build package distributions:
-```bash
-uv build
-```
-
-This will create source and wheel distributions in the `dist/` directory.
-
-3. Publish to PyPI:
-```bash
-uv publish
-```
-
-Note: You'll need to set PyPI credentials via environment variables or command flags:
-- Token: `--token` or `UV_PUBLISH_TOKEN`
-- Or username/password: `--username`/`UV_PUBLISH_USERNAME` and `--password`/`UV_PUBLISH_PASSWORD`
-
-### Debugging
-
-Since MCP servers run over stdio, debugging can be challenging. For the best debugging
-experience, we strongly recommend using the [MCP Inspector](https://github.com/modelcontextprotocol/inspector).
-
-
-You can launch the MCP Inspector via [`npm`](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) with this command:
-
-```bash
-npx @modelcontextprotocol/inspector uv --directory C:\Users\icepe\Developer_Tools\PycharmProjects\file-system-windows-python run file-system-windows-python
-```
-
-
-Upon launching, the Inspector will display a URL that you can access in your browser to begin debugging.
