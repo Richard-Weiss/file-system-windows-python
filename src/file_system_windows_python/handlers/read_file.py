@@ -11,6 +11,7 @@ from PIL import Image
 from mcp.types import TextContent, ImageContent
 
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.util.logging import log_execution
 from file_system_windows_python.util.path_validator import PathValidator
 
 logging.basicConfig(level=logging.DEBUG)
@@ -18,15 +19,34 @@ logger = logging.getLogger(__name__)
 
 
 class ReadFileHandler(Handler):
-    async def execute(self, arguments: dict | None) -> List[TextContent | ImageContent]:
-        logger.debug("Executing read file handler")
+    """
+    Handler for reading files.
 
-        if not arguments or "path" not in arguments:
-            raise ValueError("Missing required 'path' argument")
+    This handler reads the contents of a specified file and returns it as a list of TextContent or ImageContent objects.
+    """
 
-        path = arguments["path"]
+    @log_execution("read_file")
+    async def execute(self, arguments: dict) -> List[TextContent | ImageContent]:
+        """
+        Execute the handler to read a file.
+
+        Args:
+            arguments (dict): A dictionary of arguments, including:
+                - path (str): The path of the file to read.
+
+        Returns:
+            List[TextContent | ImageContent]: A list of content objects representing the file contents.
+
+        Raises:
+            ValueError: If the path argument is missing.
+            Exception: If an error occurs while reading the file.
+        """
+        path = arguments.get("path")
+        if not path:
+            raise ValueError("Missing path")
+
         await PathValidator.validate_file_path(path)
-        file_path = Path(path).resolve()
+        file_path = await PathValidator.resolve_absolute_path(path)
 
         try:
             try:
@@ -44,13 +64,34 @@ class ReadFileHandler(Handler):
             return [TextContent(type="text", text=f"Error reading file: {str(e)}")]
 
     @staticmethod
-    async def create_output_text(file_path: Path) -> list[TextContent]:
+    async def create_output_text(file_path: Path) -> List[TextContent]:
+        """
+        Create the output list of TextContent objects for a text file.
+
+        Args:
+            file_path (Path): The path of the text file.
+
+        Returns:
+            List[TextContent]: A list of TextContent objects representing the file contents.
+        """
         async with aiofiles.open(file_path, 'r') as f:
             content = await f.read()
-        return [TextContent(type="text", text=content)]
+        if not content:
+            return [TextContent(type="text", text="File is empty")]
+        return [TextContent(type="text", text=f"<fileContent>{content}</fileContent>")]
 
     @staticmethod
     async def create_output_image(file_path: Path, file_type: str) -> List[ImageContent]:
+        """
+        Create the output list of ImageContent objects for an image file.
+
+        Args:
+            file_path (Path): The path of the image file.
+            file_type (str): The MIME type of the image file.
+
+        Returns:
+            List[ImageContent]: A list of ImageContent objects representing the file contents.
+        """
         async with aiofiles.open(file_path, 'rb') as f:
             content = await f.read()
         return [ImageContent(
@@ -61,6 +102,15 @@ class ReadFileHandler(Handler):
 
     @staticmethod
     async def create_output_pdf_as_images(file_path: Path) -> List[Union[ImageContent, TextContent]]:
+        """
+        Create the output list of ImageContent and TextContent objects for a PDF file.
+
+        Args:
+            file_path (Path): The path of the PDF file.
+
+        Returns:
+            List[Union[ImageContent, TextContent]]: A list of content objects representing the PDF contents.
+        """
         results = []
         text_only = False
 
@@ -98,7 +148,23 @@ class ReadFileHandler(Handler):
         return results
 
     @staticmethod
-    async def process_page(page, text_only, extracted_texts, results):
+    async def process_page(
+            page,
+            text_only: bool,
+            extracted_texts: List[str],
+            results: List[Union[ImageContent, TextContent]]):
+        """
+        Process a single page of a PDF file.
+
+        Args:
+            page: The PDF page to process.
+            text_only (bool): Whether to extract text only.
+            extracted_texts (List[str]): A list to store extracted texts.
+            results (List[Union[ImageContent, TextContent]]): A list to store content objects.
+
+        Returns:
+            None
+        """
         text = page.get_text()
 
         if text_only:
@@ -118,7 +184,17 @@ class ReadFileHandler(Handler):
             ))
 
     @staticmethod
-    async def _convert_page_to_webp(page, optimal_zoom):
+    async def _convert_page_to_webp(page, optimal_zoom: float):
+        """
+        Convert a PDF page to a WebP image.
+
+        Args:
+            page: The PDF page to convert.
+            optimal_zoom (float): The zoom level for the conversion.
+
+        Returns:
+            bytes: The WebP image data.
+        """
         def _convert():
             pix = page.get_pixmap(matrix=fitz.Matrix(optimal_zoom, optimal_zoom))
             mode = "RGBA" if pix.alpha else "RGB"
@@ -130,7 +206,16 @@ class ReadFileHandler(Handler):
         return await asyncio.to_thread(_convert)
 
     @staticmethod
-    async def _calculate_zoom(page):
+    async def _calculate_zoom(page) -> float:
+        """
+        Calculate the optimal zoom level for converting a PDF page to an image.
+
+        Args:
+            page: The PDF page to convert.
+
+        Returns:
+            float: The optimal zoom level.
+        """
         rect = page.rect
         orig_width = rect.width
         orig_height = rect.height

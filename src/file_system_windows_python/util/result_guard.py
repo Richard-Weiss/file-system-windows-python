@@ -9,6 +9,15 @@ class ResultGuard:
 
     @staticmethod
     def measure_size(contents: List[TextContent | ImageContent]) -> int:
+        """
+        Measure the total size of the given contents.
+
+        Args:
+            contents (List[TextContent | ImageContent]): List of text or image content.
+
+        Returns:
+            int: Total size of the contents in bytes.
+        """
         content_bytes = 0
         for content in contents:
             if isinstance(content, TextContent):
@@ -22,6 +31,17 @@ class ResultGuard:
             contents: List[TextContent | ImageContent],
             tool_name: str,
             arguments: dict[str, Any] | None) -> List[TextContent | ImageContent]:
+        """
+        Validate the result by checking if the total size of the contents exceeds the maximum allowed size.
+
+        Args:
+            contents (List[TextContent | ImageContent]): List of text or image content.
+            tool_name (str): Name of the tool that generated the result.
+            arguments (dict[str, Any] | None): Arguments used by the tool.
+
+        Returns:
+            List[TextContent | ImageContent]: Original contents if the size is within the limit, otherwise a message indicating the size is too large.
+        """
         size = self.measure_size(contents)
         if size > self.MAX_SIZE_BYTES:
             return [TextContent(

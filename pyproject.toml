@@ -1,7 +1,7 @@
 [project]
 name = "file-system-windows-python"
-version = "0.1.0"
-description = "A MCP server project"
+version = "0.1.1"
+description = "An MCP server for Windows file system operations."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [ "mcp>=1.0.0",]

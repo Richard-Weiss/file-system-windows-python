@@ -32,28 +32,61 @@ class PathValidator:
     """
 
     @staticmethod
-    async def validate_file_path(path_str: str):
+    async def validate_file_path(path_str: str) -> None:
+        """
+        Validate a file path.
+
+        Args:
+            path_str (str): The path to validate.
+
+        Returns:
+            None
+
+        Raises:
+            PathValidationError: If the path fails any validation check.
+        """
         await PathValidator._validate_path(path_str, is_file=True)
 
     @staticmethod
-    async def validate_directory_path(path_str: str):
+    async def validate_directory_path(path_str: str) -> None:
+        """
+        Validate a directory path.
+
+        Args:
+            path_str (str): The path to validate.
+
+        Returns:
+            None
+
+        Raises:
+            PathValidationError: If the path fails any validation check.
+        """
         await PathValidator._validate_path(path_str, is_file=False)
 
     @staticmethod
-    async def _validate_path(path_str: str, is_file: bool):
+    async def _validate_path(path_str: str, is_file: bool) -> None:
+        """
+        Validate a path against security checks and allowed/denied paths.
+
+        Args:
+            path_str (str): The path to validate.
+            is_file (bool): Whether the path is a file.
+
+        Returns:
+            None
+
+        Raises:
+            PathValidationError: If the path fails any validation check.
+        """
         try:
             logger.debug("Starting path validation")
             logger.debug("Resolving allowed paths")
-            allowed_paths = [Path(str(p)).resolve() for p in Config().allow]
+            allowed_paths = [Path(str(p)).resolve(strict=True) for p in Config().allow]
             logger.debug("Resolving denied paths")
-            denied_paths = [Path(str(p)).resolve() for p in (Config().deny or [])]
-
-            logger.debug("Sanitizing path")
-            sanitized = sanitize_filepath(path_str, platform='Windows')
-            validate_filepath(sanitized, platform='Windows')
+            denied_paths = [Path(str(p)).resolve(strict=True) for p in (Config().deny or [])]
 
             logger.debug("Resolving absolute path")
-            abs_path = Path(sanitized).resolve()
+            abs_path = await PathValidator.resolve_absolute_path(path_str)
 
             if not abs_path.exists():
                 raise PathValidationError(f"Path {abs_path} does not exist!")
@@ -87,6 +120,40 @@ class PathValidator:
             raise PathValidationError(f"Path validation failed: {str(e)}")
 
     @staticmethod
+    async def resolve_absolute_path(path_str: str) -> Path:
+        """
+        Resolve and create an absolute path, including symlinks.
+
+        Args:
+            path_str: The path to resolve
+
+        Returns:
+            Path: The resolved absolute path
+
+        Raises:
+            PathValidationError: If the path does not exist
+        """
+        try:
+            logger.debug("Sanitizing path")
+            sanitized = sanitize_filepath(path_str, platform='Windows')
+            validate_filepath(sanitized, platform='Windows')
+
+            logger.debug("Resolving absolute path")
+            abs_path = Path(sanitized).resolve(strict=False)
+
+            if abs_path.is_symlink():
+                abs_path = abs_path.readlink().resolve(strict=True)
+            else:
+                abs_path = abs_path.resolve(strict=True)
+
+            if not abs_path.exists():
+                raise PathValidationError(f"Path {abs_path} does not exist!")
+
+            return abs_path
+        except Exception as e:
+            raise PathValidationError(f"Failed to resolve absolute path: {str(e)}")
+
+    @staticmethod
     def _is_subpath(path: Path, parent: Path) -> bool:
         """
         Check if a path is a subpath of another path.
@@ -113,6 +180,18 @@ class PathValidator:
 
     @staticmethod
     async def get_file_type(path: Path) -> str:
+        """
+        Determine the MIME type of the file.
+
+        Args:
+            path (Path): The path to the file.
+
+        Returns:
+            str: The MIME type of the file.
+
+        Raises:
+            PathValidationError: If the file contains null bytes or if there is an error during path validation.
+        """
         magika = Magika()
         async with asyncio.timeout(10):
             async with aiofiles.open(str(path), 'rb') as f:
@@ -126,7 +205,8 @@ class PathValidator:
                     async with aiofiles.open(str(path), 'r', encoding='utf-8') as f:
                         content = await f.read()
                         if '\x00' in content:
-                            raise PathValidationError("File contains null bytes! Null bytes aren't currently supported.")
+                            raise PathValidationError(
+                                "File contains null bytes! Null bytes aren't currently supported.")
                         return 'text/plain'
             except UnicodeDecodeError:
                 pass

@@ -94,7 +94,7 @@ class ToolRegistry:
         self.register_tool(
             ToolDefinition(
                 name=Tools.READ_FILE,
-                description="Reads the contents of a file. Allowed types are text/plain and images.",
+                description="Reads contents of text-based, PDF and image files. Cannot read compiled/binary files. Text results are presented in `<fileContent>` tags.",
                 inputSchema={
                     "type": "object",
                     "properties": {

@@ -1,10 +1,10 @@
 import logging
-from pathlib import Path
 
 import aiofiles
 from mcp.types import TextContent
 
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.util.logging import log_execution
 from file_system_windows_python.util.path_validator import PathValidator
 
 logging.basicConfig(level=logging.DEBUG)
@@ -12,12 +12,30 @@ logger = logging.getLogger(__name__)
 
 
 class WriteFileHandler(Handler):
-    async def execute(self, arguments: dict | None) -> list[TextContent]:
-        logger.debug("Executing write file handler")
+    """
+    Handler for writing content to a file.
+
+    This handler writes the provided content to the specified file path.
+    """
+
+    @log_execution("write_file")
+    async def execute(self, arguments: dict) -> list[TextContent]:
+        """
+        Execute the handler to write content to a file.
+
+        Args:
+            arguments (dict): A dictionary of arguments, including:
+                - path (str): The path of the file to write to.
+                - content (str): The content to write to the file.
+
+        Returns:
+            list[TextContent]: A list containing a TextContent object with a success message.
+
+        Raises:
+            ValueError: If the path or content argument is missing.
+        """
         path = arguments.get("path")
         content: str = arguments.get("content")
-
-        logger.debug("Content: %s", content)
 
         if not path:
             raise ValueError("Missing path")
@@ -25,7 +43,7 @@ class WriteFileHandler(Handler):
             raise ValueError("Missing content")
 
         await PathValidator.validate_file_path(path)
-        file_path = Path(path).resolve()
+        file_path = await PathValidator.resolve_absolute_path(path)
 
         logger.debug(f"Writing content to {file_path}")
         async with aiofiles.open(file_path, 'w') as f:
