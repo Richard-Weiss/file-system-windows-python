@@ -4,6 +4,7 @@ import aiofiles
 from mcp.types import TextContent
 
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.schemas.write_file_arguments import WriteFileArguments
 from file_system_windows_python.tools.tools import Tools
 from file_system_windows_python.util.logging import log_execution
 from file_system_windows_python.util.path_validator import PathValidator
@@ -35,13 +36,9 @@ class WriteFileHandler(Handler):
         Raises:
             ValueError: If the path or content argument is missing.
         """
-        path = arguments.get("path")
-        content: str = arguments.get("content")
-
-        if not path:
-            raise ValueError("Missing path")
-        if not content:
-            raise ValueError("Missing content")
+        args = WriteFileArguments(**arguments)
+        path = args.path
+        content = args.content
 
         await PathValidator.validate_file_path(path)
         file_path = await PathValidator.resolve_absolute_path(path)

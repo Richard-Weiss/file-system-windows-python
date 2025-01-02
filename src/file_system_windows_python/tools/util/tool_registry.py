@@ -17,7 +17,7 @@ class ToolDefinition:
     """Combines tool metadata with its handler implementation"""
     name: str
     description: str
-    inputSchema: dict
+    input_schema: dict
     handler_class: Type[Handler]
 
 
@@ -37,7 +37,7 @@ class ToolRegistry:
             return Tool(
                 name=tool_def.name,
                 description=tool_def.description,
-                inputSchema=tool_def.inputSchema
+                inputSchema=tool_def.input_schema
             )
         return None
 
@@ -61,27 +61,29 @@ class ToolRegistry:
             ToolDefinition(
                 name=Tools.LIST_ALLOWED_DIRECTORIES,
                 description="List allowed directories",
-                inputSchema={
+                input_schema={
                     "type": "object",
                     "properties": {},
                 },
                 handler_class=ListAllowedDirectoriesHandler
-            ))
+            )
+        )
         self.register_tool(
             ToolDefinition(
                 name=Tools.LIST_DENIED_DIRECTORIES,
                 description="List denied directories",
-                inputSchema={
+                input_schema={
                     "type": "object",
                     "properties": {},
                 },
                 handler_class=ListDeniedDirectoriesHandler
-            ))
+            )
+        )
         self.register_tool(
             ToolDefinition(
                 name=Tools.LS,
                 description="List directories using an absolute path. Optionally specify a page number.",
-                inputSchema={
+                input_schema={
                     "type": "object",
                     "properties": {
                         "path": {"type": "string"},
@@ -90,12 +92,13 @@ class ToolRegistry:
                     "required": ["path"],
                 },
                 handler_class=LsHandler
-            ))
+            )
+        )
         self.register_tool(
             ToolDefinition(
                 name=Tools.READ_FILE,
                 description="Reads contents of text-based, PDF and image files. Cannot read compiled/binary files. Text results are presented in `<fileContent>` tags.",
-                inputSchema={
+                input_schema={
                     "type": "object",
                     "properties": {
                         "path": {"type": "string"},
@@ -103,12 +106,13 @@ class ToolRegistry:
                     "required": ["path"],
                 },
                 handler_class=ReadFileHandler
-            ))
+            )
+        )
         self.register_tool(
             ToolDefinition(
                 name=Tools.WRITE_FILE,
                 description="Writes content to a file at the specified absolute path. Since the content is replaced, make sure to call read-file first and include everything without placeholders.",
-                inputSchema={
+                input_schema={
                     "type": "object",
                     "properties": {
                         "path": {"type": "string"},
@@ -117,4 +121,5 @@ class ToolRegistry:
                     "required": ["path", "content"],
                 },
                 handler_class=WriteFileHandler
-            ))
+            )
+        )

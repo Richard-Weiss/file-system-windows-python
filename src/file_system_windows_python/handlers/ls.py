@@ -5,6 +5,7 @@ from typing import List
 from mcp.types import TextContent
 
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.schemas.ls_arguments import LsArguments
 from file_system_windows_python.tools.tools import Tools
 from file_system_windows_python.util.logging import log_execution
 from file_system_windows_python.util.path_validator import PathValidator
@@ -39,12 +40,11 @@ class LsHandler(Handler):
             FileNotFoundError: If the specified directory does not exist.
             NotADirectoryError: If the specified path is not a directory.
         """
-        path = arguments.get("path")
-        if not path:
-            raise ValueError("Missing path")
+        args = LsArguments(**arguments)
+        path = args.path
         await PathValidator.validate_directory_path(path)
 
-        page = arguments.get("page", 1)
+        page = args.page
 
         dir_path = Path(path).resolve(strict=True)
 

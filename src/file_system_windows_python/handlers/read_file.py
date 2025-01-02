@@ -11,6 +11,7 @@ from PIL import Image
 from mcp.types import TextContent, ImageContent
 
 from file_system_windows_python.handlers.handler import Handler
+from file_system_windows_python.schemas.path_schema_base import PathSchemaBase
 from file_system_windows_python.tools.tools import Tools
 from file_system_windows_python.util.logging import log_execution
 from file_system_windows_python.util.path_validator import PathValidator
@@ -42,9 +43,8 @@ class ReadFileHandler(Handler):
             ValueError: If the path argument is missing.
             Exception: If an error occurs while reading the file.
         """
-        path = arguments.get("path")
-        if not path:
-            raise ValueError("Missing path")
+        args = PathSchemaBase(**arguments)
+        path = args.path
 
         await PathValidator.validate_file_path(path)
         file_path = await PathValidator.resolve_absolute_path(path)
